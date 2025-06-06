@@ -1,26 +1,52 @@
 const express = require('express');
-const fs = require('fs').promises;
+const cors = require('cors');
+
 const app = express();
+app.use(cors());
+app.use(express.json()); // parse JSON bodies
 
-let usersData = null;
+// Start with in-memory "users" data
+let usersData = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' }
+];
 
-const loadData = async () => {
-  try {
-    const data = await fs.readFile('./data/users.json', 'utf8');
-    usersData = JSON.parse(data);
-  } catch (err) {
-    console.error('Failed to load user data:', err);
-  }
-};
-
-loadData();
-
+// Get all users
 app.get('/users', (req, res) => {
-  if (usersData) {
-    res.json(usersData);
-  } else {
-    res.status(500).send('User data not loaded');
-  }
+  res.json(usersData);
+});
+
+// Get user by id
+app.get('/users/:id', (req, res) => {
+  const user = usersData.find(u => u.id === parseInt(req.params.id));
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+// Create new user
+app.post('/users', (req, res) => {
+  const { name } = req.body;
+  const newUser = { id: usersData.length + 1, name };
+  usersData.push(newUser);
+  res.status(201).json(newUser);
+});
+
+// Update user
+app.put('/users/:id', (req, res) => {
+  const user = usersData.find(u => u.id === parseInt(req.params.id));
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  user.name = req.body.name || user.name;
+  res.json(user);
+});
+
+// Delete user
+app.delete('/users/:id', (req, res) => {
+  const index = usersData.findIndex(u => u.id === parseInt(req.params.id));
+  if (index === -1) return res.status(404).json({ error: 'User not found' });
+
+  usersData.splice(index, 1);
+  res.json({ message: 'User deleted' });
 });
 
 const PORT = process.env.PORT || 3000;
